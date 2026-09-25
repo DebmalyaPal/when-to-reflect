@@ -1,0 +1,31 @@
+# Development-time intervention-FORMAT audit.
+#
+# Same 18 stored states as the wording audit; no base trace is regenerated and
+# no direct branch is run. The pre-intervention shared prefix is identical in
+# every condition. Role-transition tokens for `user_turn` are derived from the
+# tokenizer's chat template and count as part of the treatment.
+audit: intervention_format
+input_path: outputs/dev/math_utility_dataset.json
+output_path: outputs/dev/intervention_format_audit.json
+model_id: Qwen/Qwen2.5-0.5B-Instruct
+
+seeds: [42, 43]
+generation:
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.95
+  max_new_tokens: 1024
+
+conditions:
+  - name: baseline
+    format: assistant_text
+    instruction: "\n\nCarefully review the reasoning so far for mistakes, then continue the solution."
+  - name: assistant_monologue_minimal
+    format: assistant_text
+    instruction: "Let me verify the reasoning so far and continue carefully from here."
+  - name: assistant_monologue_local
+    format: assistant_text
+    instruction: "Let me check the reasoning so far for a local mistake. If I find one, I'll correct it and continue from here."
+  - name: user_turn_local
+    format: user_turn
+    instruction: "Briefly check the reasoning so far for any local mistake, then continue from the current point."

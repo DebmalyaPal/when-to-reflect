@@ -1,0 +1,52 @@
+# Qwen3-8B CUDA compatibility smoke.
+#
+# Purpose: the first command run after the repository is moved to the UCSD
+# A5000 box, to prove that the same runner and the same config stack drive
+# Qwen3-8B on CUDA with no source changes. Device selection is automatic
+# (select_device prefers CUDA, then MPS, then CPU), so nothing here names a
+# backend.
+#
+# This is a COMPATIBILITY smoke, not an experiment: one problem and two
+# rollouts per branch. `num_rollouts: 2` is the only value deliberately reduced
+# from the development settings; raise it back to 4 before any run whose
+# utilities are meant to be read. Everything else - checkpoint policy,
+# eligibility band, frozen reflection operator, decoding parameters, thinking
+# mode - is identical to the Qwen3-0.6B development configuration.
+#
+# Expected resource use on one A5000 (24 GB): ~16.4 GB of weights in bfloat16
+# plus a small KV cache. Weights are materialised on the host before being
+# moved to the GPU, so the box also needs ~17 GB of free system RAM.
+dataset: EleutherAI/hendrycks_math
+dataset_path: data/raw/math_train
+first_problem_index: 0
+num_problems: 1
+output_path: outputs/cuda_smoke/qwen3_8b/math_utility_dataset_smoke.json
+
+model_id: Qwen/Qwen3-8B
+base_seed: 42
+
+# Non-thinking mode, as frozen for the controlled main experiment. Qwen3's
+# chat template defaults to thinking on, which does not terminate within
+# max_new_tokens and yields no gradable rollouts.
+chat_template:
+  enable_thinking: false
+
+# Deterministic base trajectory; segmentation and checkpoint selection run on it.
+base_trace:
+  max_new_tokens: 1024
+
+# Identical decoding for the direct and reflection branches, stated explicitly
+# so that no setting is inherited from Qwen3-8B's own generation_config.json.
+# The runner fails if any of these is not what `generate` actually applies.
+rollout:
+  num_rollouts: 2  # COMPATIBILITY SMOKE ONLY; development value is 4
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.95
+  top_k: 20
+  repetition_penalty: 1.0
+  max_new_tokens: 1024
+
+# Frozen reflection operator, unchanged across models.
+reflection_prompt_version: assistant_monologue_local_v1
+reflection_instruction: "Let me check the reasoning so far for a local mistake. If I find one, I'll correct it and continue from here."

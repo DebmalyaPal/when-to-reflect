@@ -22,7 +22,7 @@ PyTorch installation on the target machine.
 ## Layout
 
 - `src/when_to_reflect/`: importable project code.
-- `configs/`: versioned experiment settings; `base.yaml` holds shared defaults.
+- `configs/`: versioned experiment settings, one file per runnable entry point.
 - `scripts/`: command-line entry points as experiments are added.
 - `tests/`: automated checks.
 
@@ -31,6 +31,34 @@ PyTorch installation on the target machine.
 ```bash
 pytest
 ruff check .
+python scripts/smoke.py
+python scripts/run_utility_dataset.py
 ```
 
-No experiment implementation is included yet.
+`scripts/smoke.py` reads `configs/smoke.yaml`, reports accelerator support,
+performs a tensor operation, and runs one deterministic Qwen generation. It
+verifies the runtime; it does not implement an experiment.
+
+`scripts/prepare_math_data.py` downloads and prepares the local MATH training
+data under `data/raw/math_train`.
+
+## Experiments
+
+`scripts/run_utility_dataset.py` is the single experiment entry point. It reads
+`configs/math_dev_utility.yaml` by default, or a config path given as its first
+argument. For each source problem it generates a deterministic base trajectory,
+segments it into token-preserving reasoning states, selects early/middle/late
+and one seeded-random checkpoint from the eligible interior candidates, forks
+each state into matched-seed direct and reflection rollouts, grades them, and
+estimates state-level reflection utility.
+
+Key properties:
+
+- direct and reflection branches start from the identical stored token prefix;
+- rollout `i` of both actions uses the same seed, so the actions are compared
+  under common random numbers;
+- `U_hat` is a state-level quantity and is never aggregated to problem level;
+- a state's `U_hat` is null unless every planned rollout yielded a reward, and
+  each unavailable rollout records an explicit outcome.
+
+Set `num_problems` in the config to change how many problems are run.

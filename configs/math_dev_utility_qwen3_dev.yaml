@@ -1,0 +1,77 @@
+# State-level reflection-utility dataset over MATH training problems.
+#
+# Qwen3-0.6B development pipeline, 5 problems. Byte-identical to
+# configs/math_dev_utility_qwen3.yaml (the one-problem smoke config) apart from
+# `num_problems` and `output_path`; the smoke artefact is not overwritten.
+#
+# The Qwen2.5-0.5B configuration and results in
+# configs/math_dev_utility.yaml and outputs/dev/math_utility_dataset*.json are
+# archived and are NOT overwritten by this run.
+#
+# Everything scientific is carried over unchanged from the Qwen2.5 development
+# config: eligibility band, checkpoint targets, num_rollouts, matched seeds,
+# temperature, top_p, max_new_tokens, reward taxonomy, utility definition and
+# exact-prefix branching semantics. The single model-compatibility adjustment is
+# `chat_template.enable_thinking: false` (see below).
+dataset: EleutherAI/hendrycks_math
+dataset_path: data/raw/math_train
+first_problem_index: 0
+num_problems: 5
+output_path: outputs/dev/qwen3/math_utility_dataset.json
+
+model_id: Qwen/Qwen3-0.6B
+base_seed: 42
+
+# REQUIRED MODEL-COMPATIBILITY ADJUSTMENT.
+#
+# Qwen3's chat template defaults to thinking mode (`enable_thinking` unset and
+# `enable_thinking: true` render identically). Under that default the greedy
+# base trace for MATH problem 0 consumed all 1024 tokens without ever emitting
+# `</think>`: terminated_by_eos=False, generation_complete=False, no answer.
+# Every rollout would then be `generation_incomplete`, so every state's reward
+# would be null and every utility_hat would be null.
+#
+# `enable_thinking: false` prefills `<think>\n\n</think>\n\n` into the prompt and
+# restores the non-thinking chat-completion behaviour the pipeline was built for
+# and that Qwen2.5-0.5B-Instruct exhibited (280 tokens, EOS-terminated, reaches
+# "Final answer:"). This preserves max_new_tokens: 1024; thinking mode would be
+# the change, and is incompatible with that budget.
+#
+# Note: `<think>`/`</think>` are added but NON-special tokens, so the prefill is
+# visible in decoded prefix_text. It sits in the prompt, not the generated
+# trace, so segmentation boundaries and token indices are unaffected.
+chat_template:
+  enable_thinking: false
+
+# Deterministic base trajectory; segmentation and checkpoint selection run on it.
+base_trace:
+  max_new_tokens: 1024
+
+# Identical decoding for the direct and reflection branches.
+# Decoding is stated explicitly rather than inherited. `generate` overlays the
+# arguments it is given onto the model's own generation_config.json, so any
+# setting left out is decided by the model: Qwen2.5-0.5B-Instruct ships
+# repetition_penalty 1.1 while Qwen3-0.6B ships none (i.e. 1.0). The values
+# below are the ones Qwen3-0.6B resolved to in the runs already recorded, so
+# pinning them changes no generated token; it only stops the model deciding.
+# The runner fails if any of them is not what `generate` actually applies.
+#
+# top_k and repetition_penalty are not passed to the greedy base trace: the
+# sampling warpers are inert without do_sample, and repetition_penalty 1.0 is
+# the no-op value, so the base trace stays byte-identical to the recorded runs.
+rollout:
+  num_rollouts: 4
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.95
+  top_k: 20
+  repetition_penalty: 1.0
+  max_new_tokens: 1024
+
+# Carried over unchanged from the Qwen2.5 development freeze. Assistant-monologue
+# format: appended verbatim inside the running assistant turn, after the exact
+# shared prefix, with no role delimiters. Tokenizes to the same 26 token ids on
+# Qwen3-0.6B as on Qwen2.5-0.5B-Instruct (shared BPE vocabulary). Initial Qwen3
+# reflection operator; not prompt-tuned for this model.
+reflection_prompt_version: assistant_monologue_local_v1
+reflection_instruction: "Let me check the reasoning so far for a local mistake. If I find one, I'll correct it and continue from here."

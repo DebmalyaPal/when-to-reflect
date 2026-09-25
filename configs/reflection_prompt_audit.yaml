@@ -1,0 +1,29 @@
+# Development-time reflection-prompt fidelity audit.
+#
+# This is prompt tooling, not a research experiment. It reuses the states that
+# the main runner already produced so the reflection wording is the only
+# treatment variable: no base trace is regenerated and no direct branch is run.
+input_path: outputs/dev/math_utility_dataset.json
+output_path: outputs/dev/reflection_prompt_audit.json
+model_id: Qwen/Qwen2.5-0.5B-Instruct
+
+# One continuation per prompt per state, same seed for every variant at a state.
+seeds: [42]
+generation:
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.95
+  max_new_tokens: 1024
+
+# Stored verbatim. Note that `baseline` carries a leading blank line the other
+# two do not; stored prefixes already end in a paragraph break.
+conditions:
+  - name: baseline
+    format: assistant_text
+    instruction: "\n\nCarefully review the reasoning so far for mistakes, then continue the solution."
+  - name: local_review
+    format: assistant_text
+    instruction: "Review the reasoning above for any mistakes. Do not restart the problem from the beginning. If the reasoning so far is correct, continue from the current point. If you find an error, briefly correct it and continue from the current point."
+  - name: concise_local_review
+    format: assistant_text
+    instruction: "Check the reasoning so far for errors, then continue from the current point. Do not restart the solution."

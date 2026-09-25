@@ -4,13 +4,20 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+
+# Virtual environment
 .venv/
+
+# Downloaded/generated data
+data/raw/
+data/processed/
 
 # Experiment outputs
 artifacts/
 checkpoints/
 outputs/
 wandb/
+logs/
 
 # Local configuration
 .env

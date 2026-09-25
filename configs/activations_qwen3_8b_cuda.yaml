@@ -1,0 +1,13 @@
+# Pre-treatment hidden-state extraction for the Qwen3-8B CUDA smoke states.
+#
+# Run this straight after the Qwen3-8B utility smoke, on the same machine and
+# the same backend: the extractor refuses to run if the states in the input
+# record were generated on a different device.
+#
+# Expected artifact size: 37 hidden states (36 transformer layers + the
+# embedding output) x 4096 dimensions x 2 bytes = ~0.3 MB per state.
+input_path: outputs/cuda_smoke/qwen3_8b/math_utility_dataset_smoke.json
+output_dir: outputs/cuda_smoke/qwen3_8b/activations
+model_id: Qwen/Qwen3-8B
+
+storage_dtype: float16

@@ -1,0 +1,28 @@
+# SUPPLEMENTARY diagnostic for the reflection-prompt audit.
+#
+# In the primary audit, `baseline` carried a leading blank line and the two new
+# prompts did not, and the two new prompts produced immediate EOS on most
+# states. This config re-runs the identical states with the same wording but a
+# matched leading separator, to separate a wording effect from a formatting
+# effect. `baseline` is unchanged and acts as the control.
+input_path: outputs/dev/math_utility_dataset.json
+output_path: outputs/dev/reflection_prompt_audit_separator.json
+model_id: Qwen/Qwen2.5-0.5B-Instruct
+
+seeds: [42]
+generation:
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.95
+  max_new_tokens: 1024
+
+conditions:
+  - name: baseline
+    format: assistant_text
+    instruction: "\n\nCarefully review the reasoning so far for mistakes, then continue the solution."
+  - name: local_review_nl
+    format: assistant_text
+    instruction: "\n\nReview the reasoning above for any mistakes. Do not restart the problem from the beginning. If the reasoning so far is correct, continue from the current point. If you find an error, briefly correct it and continue from the current point."
+  - name: concise_local_review_nl
+    format: assistant_text
+    instruction: "\n\nCheck the reasoning so far for errors, then continue from the current point. Do not restart the solution."

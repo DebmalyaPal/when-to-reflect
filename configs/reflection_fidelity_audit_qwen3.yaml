@@ -1,0 +1,30 @@
+# Small Qwen3-0.6B reflection-FIDELITY sanity check.
+#
+# Not a prompt search: one condition only, the frozen operator
+# assistant_monologue_local_v1, replayed on states the Qwen3 dev run already
+# produced. No base trace is regenerated and no direct branch is run.
+#
+# Scope is held to two checkpoints per problem via `selection_reasons`. That
+# filter reads only how a checkpoint was selected, never a reward or a
+# correctness outcome. `early` and `late` span the eligibility band.
+#
+# Fidelity labels are assigned afterwards by human inspection of the saved
+# continuations. Answer correctness is recorded but is NOT used to assign a
+# fidelity category or to judge the prompt.
+audit: reflection_fidelity_qwen3
+input_path: outputs/dev/qwen3/math_utility_dataset.json
+output_path: outputs/dev/qwen3/reflection_fidelity_audit.json
+model_id: Qwen/Qwen3-0.6B
+
+seeds: [42, 43]
+selection_reasons: [early, late]
+generation:
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.95
+  max_new_tokens: 1024
+
+conditions:
+  - name: assistant_monologue_local_v1
+    format: assistant_text
+    instruction: "Let me check the reasoning so far for a local mistake. If I find one, I'll correct it and continue from here."

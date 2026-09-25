@@ -1,0 +1,18 @@
+# Pre-treatment hidden-state extraction for the Qwen3-0.6B development states.
+#
+# Reads the stored 5-problem development record and, for each selected state,
+# runs the model on exactly that state's shared_prefix_token_ids. No rollout is
+# generated or regenerated and the dataset record is never written to.
+#
+# The states in the input record were generated on MPS by this same model
+# revision; the extractor refuses to run if the host selects a different
+# backend, because CPU/MPS/CUDA forward passes diverge numerically and would
+# describe a differently defined state.
+input_path: outputs/dev/qwen3/math_utility_dataset.json
+output_dir: outputs/dev/qwen3/activations
+model_id: Qwen/Qwen3-0.6B
+
+# Activations are stored at half precision; the manifest records the maximum
+# absolute error the cast introduced, and the extractor verifies that a
+# re-run forward pass still reproduces the full-precision values exactly.
+storage_dtype: float16
