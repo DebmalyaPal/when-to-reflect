@@ -1,0 +1,21 @@
+# Pre-treatment hidden-state extraction for the Qwen3-0.6B CUDA states.
+#
+# Reads the stored 5-problem CUDA record and, for each selected state, runs the
+# model on exactly that state's shared_prefix_token_ids. No rollout is generated
+# or regenerated and the dataset record is never written to.
+#
+# Run this on the same machine and backend as the utility run that produced the
+# input record: the extractor refuses to run if the states were generated on a
+# different device, because CPU/MPS/CUDA forward passes diverge numerically and
+# would describe a differently defined state.
+#
+# Expected artifact: 29 hidden states (28 transformer layers + the embedding
+# output) x 1024 dimensions x 2 bytes = ~59 kB per state.
+input_path: outputs/cuda/qwen3_0.6b/math_utility_dataset.json
+output_dir: outputs/cuda/qwen3_0.6b/activations
+model_id: Qwen/Qwen3-0.6B
+
+# Activations are stored at half precision; the manifest records the maximum
+# absolute error the cast introduced, and the extractor verifies that a re-run
+# forward pass still reproduces the full-precision values exactly.
+storage_dtype: float16

@@ -1,0 +1,65 @@
+# State-level reflection-utility dataset over MATH training problems.
+#
+# Qwen3-0.6B on CUDA, 5 problems. Scientifically identical to
+# configs/math_dev_utility_qwen3_dev.yaml (the MPS development configuration):
+# same problems, same base_seed and matched rollout seeds, same eligibility
+# band and checkpoint targets, same num_rollouts, same decoding parameters,
+# same frozen reflection operator, same thinking mode. The ONLY difference is
+# `output_path`.
+#
+# The output path is separate on purpose. CPU, MPS and CUDA forward passes
+# diverge numerically, so the traces, checkpoints, branches and utilities
+# produced here define DIFFERENT states from the MPS development record, even
+# though the configuration that produced them is the same. They are a parallel
+# backend replicate, not a continuation, and neither record may overwrite or be
+# pooled with the other.
+#
+# The Qwen2.5-0.5B configuration and results in configs/math_dev_utility.yaml
+# and outputs/dev/math_utility_dataset*.json remain archived and untouched.
+#
+# Nothing here names a backend: select_device() prefers CUDA, then MPS, then
+# CPU, and the runner records the device it actually used in provenance.
+dataset: EleutherAI/hendrycks_math
+dataset_path: data/raw/math_train
+first_problem_index: 0
+num_problems: 5
+output_path: outputs/cuda/qwen3_0.6b/math_utility_dataset.json
+
+model_id: Qwen/Qwen3-0.6B
+base_seed: 42
+
+# Non-thinking mode, as frozen for the controlled main experiment. Qwen3's chat
+# template defaults to thinking on, which does not terminate within
+# max_new_tokens and yields no gradable rollouts. `enable_thinking: false`
+# prefills `<think>\n\n</think>\n\n` into the prompt; `<think>`/`</think>` are
+# added but NON-special tokens, and the prefill sits in the prompt rather than
+# the generated trace, so segmentation boundaries and token indices are
+# unaffected.
+chat_template:
+  enable_thinking: false
+
+# Deterministic base trajectory; segmentation and checkpoint selection run on it.
+base_trace:
+  max_new_tokens: 1024
+
+# Identical decoding for the direct and reflection branches, stated explicitly
+# so that no setting is inherited from the model's own generation_config.json.
+# The runner fails if any of these is not what `generate` actually applies.
+#
+# top_k and repetition_penalty are not passed to the greedy base trace: the
+# sampling warpers are inert without do_sample, and repetition_penalty 1.0 is
+# the no-op value.
+rollout:
+  num_rollouts: 4
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.95
+  top_k: 20
+  repetition_penalty: 1.0
+  max_new_tokens: 1024
+
+# Frozen reflection operator, unchanged across models and backends.
+# Assistant-monologue format: appended verbatim inside the running assistant
+# turn, after the exact shared prefix, with no role delimiters.
+reflection_prompt_version: assistant_monologue_local_v1
+reflection_instruction: "Let me check the reasoning so far for a local mistake. If I find one, I'll correct it and continue from here."
